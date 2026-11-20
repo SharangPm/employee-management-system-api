@@ -92,3 +92,36 @@ Tests are independent of a production database. Mongo client/database are single
 
 
 
+
+## React frontend
+
+The independently deployable frontend lives in `frontend/` and uses React, Vite, React Router, Axios, Bootstrap 5, React Bootstrap, and React Icons. It provides Admin dashboards and employee search/filter/pagination, employee create/read/update/delete screens, Employee self-profile, role-protected routes, JWT session handling, and API validation/error feedback. The Employee self-profile is read-only because the API does not expose a self-edit route; Admins can edit employee records.
+
+### Frontend local setup
+
+Prerequisites: Node.js 20.19+ or 22.12+ and npm. Start the API and MongoDB using the local development steps above, then:
+
+```sh
+cd frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+Open the Vite URL (normally `http://localhost:5173`). `frontend/.env.example` defines `VITE_API_BASE_URL`, the Axios API root. Its local default is `http://localhost:8080/api`; set it to the deployed API's HTTPS `/api` URL when building for production. This value is public and must not contain credentials or secrets.
+
+Set `CORS_ALLOWED_ORIGINS=http://localhost:5173` in the API's local environment. In production, configure it to the exact HTTPS origin serving the frontend; the API rejects wildcard or non-HTTPS production origins. Never add API secrets to `frontend/.env` or any `VITE_*` variable because Vite embeds these values in public browser assets.
+
+JWTs are kept in `sessionStorage`, attached as a Bearer token to API requests, and cleared on HTTP 401 or logout. A 403 is shown as an authorization error without silently changing the signed-in account. Employee role registration and profile linking remain API/Admin operations described above.
+
+### Frontend production build and deployment
+
+```sh
+cd frontend
+npm ci
+npm run build
+```
+
+The static site output is `frontend/dist`. Set `VITE_API_BASE_URL` to the real HTTPS API base before building and publish `dist` using a static hosting service such as Azure Static Web Apps, Cloudflare Pages, Netlify, or an equivalent. Configure the host's SPA fallback so routes such as `/employees/123` serve `index.html`. Configure backend `CORS_ALLOWED_ORIGINS` to the exact frontend HTTPS origin. Deploy API and frontend independently, configure HTTPS for both, and verify the browser can reach the API without mixed-content or CORS errors. No live hosting URL or credentials are supplied by this repository.
+
+The login page uses the existing `POST /api/auth/login` response (`accessToken`, `email`, `role`, `expiresAt`). Employee screens call the existing `/api/employees` list, item, mutation, and `/me` routes; pagination/filter query names and employee DTO fields match the API contract. The frontend does not add or assume backend routes.
