@@ -92,7 +92,7 @@ npm install
 npm run dev
 ```
 
-Open the Vite URL (normally `http://localhost:5173`). `frontend/.env.example` defines `VITE_API_BASE_URL`, the Axios API root. Its local default is `http://localhost:8080/api`; set it to the deployed API's HTTPS `/api` URL when building for production. This value is public and must not contain credentials or secrets.
+Open the Vite URL (normally `http://localhost:5173`). `frontend/.env.example` defines `VITE_API_BASE_URL`; set it to the API origin or its `/api` root. Axios normalizes either form to exactly one `/api` prefix, matching the controller route. The local default is `http://localhost:8080`. This value is public and must not contain credentials or secrets.
 
 Set `CORS_ALLOWED_ORIGINS=http://localhost:5173` in the API's local environment. In production, configure it to the exact HTTPS origin serving the frontend; the API rejects wildcard or non-HTTPS production origins. Never add API secrets to `frontend/.env` or any `VITE_*` variable because Vite embeds these values in public browser assets.
 
@@ -106,7 +106,7 @@ npm ci
 npm run build
 ```
 
-The static site output is `frontend/dist`. Set `VITE_API_BASE_URL` to the real HTTPS API base before building and publish `dist` using a static hosting service such as Azure Static Web Apps, Cloudflare Pages, Netlify, or an equivalent. Configure the host's SPA fallback so routes such as `/employees/123` serve `index.html`. Configure backend `CORS_ALLOWED_ORIGINS` to the exact frontend HTTPS origin. Deploy API and frontend independently, configure HTTPS for both, and verify the browser can reach the API without mixed-content or CORS errors. No live hosting URL or credentials are supplied by this repository.
+The static site output is `frontend/dist`. Set `VITE_API_BASE_URL` to the real HTTPS API origin (or its `/api` root) before building and publish `dist` using a static hosting service such as Azure Static Web Apps, Cloudflare Pages, Netlify, or an equivalent. Configure the host's SPA fallback so routes such as `/employees/123` serve `index.html`. Configure backend `CORS_ALLOWED_ORIGINS` to the exact frontend HTTPS origin. Deploy API and frontend independently, configure HTTPS for both, and verify the browser can reach the API without mixed-content or CORS errors. No live hosting URL or credentials are supplied by this repository.
 
 Frontend routes use the existing employee endpoints: list, item, create, update, and delete. Pagination/filter query names and employee DTO fields match the API contract.
 
@@ -133,4 +133,4 @@ Render sets `RENDER=true` automatically; do not add or override it. Do not set `
 
 Render redirects public HTTP requests to HTTPS and terminates TLS at its load balancer. The API therefore keeps HSTS enabled in Production but skips its own HTTPS redirection on Render, which would otherwise see the internal HTTP connection and could create a redirect loop. On other Production hosts, the existing exact `TRUSTED_PROXY_IPS` allowlist and ASP.NET forwarded-header/HTTPS-redirection behavior remain required.
 
-To permit Atlas connections, use the Render API service's **Connect menu > Outbound tab** IP ranges in the Atlas Network Access allowlist if your Atlas setup requires IP allowlisting. Those are Render egress addresses for MongoDB connections; they are not ingress proxy addresses and must never be copied into `TRUSTED_PROXY_IPS`. Set the Render web service port to `10000` and use its assigned HTTPS hostname or custom domain for the frontend's `VITE_API_BASE_URL` and the API's exact `CORS_ALLOWED_ORIGINS`.
+To permit Atlas connections, use the Render API service's **Connect menu > Outbound tab** IP ranges in the Atlas Network Access allowlist if your Atlas setup requires IP allowlisting. Those are Render egress addresses for MongoDB connections; they are not ingress proxy addresses and must never be copied into `TRUSTED_PROXY_IPS`. Set the Render web service port to `10000`. For the currently configured API, set the frontend `VITE_API_BASE_URL` to `https://employee-management-system-api-my3l.onrender.com` (the Axios client adds `/api` exactly once); the resulting employee list URL is `https://employee-management-system-api-my3l.onrender.com/api/employees?page=1&pageSize=10`. Set `CORS_ALLOWED_ORIGINS` to the exact deployed frontend origin.
