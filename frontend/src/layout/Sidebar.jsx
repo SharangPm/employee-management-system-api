@@ -1,16 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import { FiBriefcase, FiGrid, FiUsers } from 'react-icons/fi';
-import { useAuth } from '../auth/useAuth';
 
 export function Sidebar({ open, onNavigate }) {
-  const { role } = useAuth();
-  const links =
-    role === 'Admin'
-      ? [
-          { to: '/admin', label: 'Overview', icon: <FiGrid />, end: true },
-          { to: '/employees', label: 'Employees', icon: <FiUsers /> },
-        ]
-      : [{ to: '/employee', label: 'My profile', icon: <FiBriefcase />, end: true }];
+  const links = [
+    { to: '/', label: 'Overview', icon: <FiGrid />, end: true },
+    { to: '/employees', label: 'Employees', icon: <FiUsers /> },
+  ];
 
   return (
     <>
@@ -47,7 +42,7 @@ export function Sidebar({ open, onNavigate }) {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <span className="status-dot" /> API workspace
+          <span className="status-dot" /> Public demo
         </div>
       </aside>
     </>

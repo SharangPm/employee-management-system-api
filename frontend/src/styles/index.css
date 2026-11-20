@@ -27,8 +27,7 @@ h1,
 h2,
 h3,
 h4,
-.brand-lockup strong,
-.login-brand strong {
+.brand-lockup strong {
   font-family: Manrope, sans-serif;
   letter-spacing: -0.035em;
 }
@@ -47,15 +46,13 @@ h4,
   flex-direction: column;
   transition: transform 0.2s;
 }
-.brand-lockup,
-.login-brand {
+.brand-lockup {
   display: flex;
   align-items: center;
   gap: 12px;
   color: #fff;
 }
-.brand-lockup strong,
-.login-brand strong {
+.brand-lockup strong {
   display: block;
   font-size: 19px;
   letter-spacing: -0.04em;
@@ -154,42 +151,6 @@ h4,
 }
 .context-divider {
   color: #d6dbe4;
-}
-.topbar-user {
-  align-items: center;
-  gap: 10px;
-}
-.user-avatar {
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  background: #e8edff;
-  color: #4264cf;
-  border-radius: 50%;
-  font-size: 12px;
-  font-weight: 700;
-}
-.user-copy strong,
-.user-copy span {
-  display: block;
-}
-.user-copy strong {
-  font-size: 12px;
-  color: #26334b;
-}
-.user-copy span {
-  font-size: 11px;
-  color: #98a1b0;
-  margin-top: 2px;
-}
-.logout-button {
-  border-color: #e2e6ee;
-  color: #59657a;
-  background: white;
-}
-.logout-button svg {
-  vertical-align: -2px;
 }
 .icon-button {
   border: 0;
@@ -503,116 +464,9 @@ h4,
   padding: 12px 14px;
   font-size: 12px;
 }
-.login-page {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: minmax(360px, 0.9fr) 1.1fr;
-  background: white;
-}
-.login-visual {
-  padding: 35px 8%;
-  background: #17243d;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 100vh;
-  position: relative;
-  overflow: hidden;
-}
-.login-visual::after {
-  content: '';
-  position: absolute;
-  width: 430px;
-  height: 430px;
-  border: 1px solid #ffffff12;
-  border-radius: 50%;
-  right: -190px;
-  bottom: 60px;
-  box-shadow:
-    0 0 0 55px #ffffff08,
-    0 0 0 110px #ffffff05;
-}
-.login-story {
-  position: relative;
-  z-index: 1;
-  max-width: 430px;
-  margin: 45px 0;
-}
-.light-eyebrow {
-  color: #9eaff6;
-}
-.login-story h1 {
-  font-size: clamp(39px, 4.5vw, 62px);
-  line-height: 1.12;
-  font-weight: 700;
-  margin: 20px 0;
-}
-.login-story h1 em {
-  font-style: normal;
-  color: #94a9ff;
-}
-.login-story p {
-  color: #b4bfd1;
-  font-size: 15px;
-}
-.login-visual-stats {
-  display: flex;
-  gap: 23px;
-  margin-top: 39px;
-  color: #c6cede;
-}
-.login-visual-stats div {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-}
-.login-visual-stats svg {
-  color: #96a9ff;
-}
-.login-visual-footer {
-  font-size: 9px;
-  letter-spacing: 0.13em;
-  color: #8794aa;
-}
-.login-panel {
-  display: grid;
-  place-items: center;
-  padding: 35px;
-}
-.login-form-wrap {
-  width: min(100%, 410px);
-}
-.login-form-wrap h2 {
-  font-size: 25px;
-  color: #202d46;
-  margin-bottom: 8px;
-}
 .muted-copy {
   font-size: 13px;
   color: #8a94a4;
-}
-.login-card {
-  margin-top: 27px;
-}
-.login-card .card-body {
-  padding: 0;
-}
-.login-help {
-  text-align: center;
-  color: #8993a2;
-  font-size: 12px;
-  margin-top: 21px;
-}
-.login-security {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  color: #a3aab6;
-  font-size: 10px;
-  margin-top: 38px;
 }
 .form-error-summary {
   padding: 11px 13px;
@@ -622,9 +476,6 @@ h4,
   color: #b93e3a;
   font-size: 12px;
   margin-top: 20px;
-}
-.login-mobile-brand {
-  display: none;
 }
 .loading-screen {
   min-height: 100vh;
@@ -714,26 +565,6 @@ h4,
   }
   .metric-value {
     font-size: 25px;
-  }
-  .login-page {
-    display: block;
-  }
-  .login-visual {
-    display: none;
-  }
-  .login-panel {
-    min-height: 100vh;
-    padding: 26px 22px;
-  }
-  .login-mobile-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 49px;
-  }
-  .login-mobile-brand strong {
-    font-family: Manrope, sans-serif;
-    font-size: 18px;
   }
   .pagination-wrap {
     align-items: flex-start;
@@ -1066,4 +897,13 @@ h4,
   .details-grid {
     grid-template-columns: 1fr;
   }
+}
+.demo-badge {
+  padding: 7px 11px;
+  border: 1px solid #e5eaf4;
+  border-radius: 20px;
+  background: #f7f8fc;
+  color: #68758b;
+  font-size: 11px;
+  font-weight: 600;
 }

@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using EmployeeManagement.API.DTOs.Employee;
 using EmployeeManagement.API.Interfaces;
 using EmployeeManagement.API.Middleware;
@@ -10,20 +9,9 @@ namespace EmployeeManagement.API.Controllers;
 
 [ApiController]
 [Route("api/employees")]
-[Authorize]
 public sealed class EmployeeController(IEmployeeService service) : ControllerBase
 {
-    [HttpGet("me")]
-    [Authorize(Roles = "Employee")]
-    public async Task<ActionResult<EmployeeResponse>> GetMyProfile(CancellationToken cancellationToken)
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? throw new UnauthorizedAccessException("The token has no account ID.");
-        return Ok(Map(await service.GetByUserIdAsync(userId, cancellationToken)));
-    }
-
     [HttpGet]
-    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<PagedResponse<EmployeeResponse>>> List(
         [FromQuery] string? search,
         [FromQuery] string? department,
@@ -36,48 +24,30 @@ public sealed class EmployeeController(IEmployeeService service) : ControllerBas
         return Ok(new PagedResponse<EmployeeResponse>(items.Select(Map).ToList(), page, pageSize, total));
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id:length(24)}")]
     public async Task<ActionResult<EmployeeResponse>> Get(string id, CancellationToken cancellationToken)
     {
         var employee = await service.GetAsync(id, cancellationToken);
-        EnsureAdminOrOwnProfile(employee);
         return Ok(Map(employee));
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<EmployeeResponse>> Create(EmployeeRequest request, CancellationToken cancellationToken)
     {
         var employee = await service.CreateAsync(ToEntity(request), cancellationToken);
         return CreatedAtAction(nameof(Get), new { id = employee.Id }, Map(employee));
     }
 
-    [HttpPut("{id}")]
-    [Authorize(Roles = "Admin")]
+    [HttpPut("{id:length(24)}")]
     public async Task<ActionResult<EmployeeResponse>> Update(
         string id, EmployeeRequest request, CancellationToken cancellationToken) =>
         Ok(Map(await service.UpdateAsync(id, ToEntity(request), cancellationToken)));
 
-    [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")]
+    [HttpDelete("{id:length(24)}")]
     public async Task<IActionResult> Delete(string id, CancellationToken cancellationToken)
     {
         await service.DeleteAsync(id, cancellationToken);
         return NoContent();
-    }
-
-    private void EnsureAdminOrOwnProfile(Employee employee)
-    {
-        if (User.IsInRole("Admin"))
-        {
-            return;
-        }
-
-        var accountId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (accountId is null || !string.Equals(accountId, employee.LinkedUserId, StringComparison.Ordinal))
-        {
-            throw new UnauthorizedAccessException("You can only access your own employee profile.");
-        }
     }
 
     private static Employee ToEntity(EmployeeRequest request) => new()

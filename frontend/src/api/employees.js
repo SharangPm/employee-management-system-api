@@ -23,8 +23,3 @@ export async function updateEmployee(id, employee) {
 export async function deleteEmployee(id) {
   await api.delete(`/employees/${encodeURIComponent(id)}`);
 }
-
-export async function getMyProfile() {
-  const response = await api.get('/employees/me');
-  return response.data;
-}

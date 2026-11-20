@@ -51,7 +51,7 @@ export function AdminDashboardPage() {
       <div className="page-heading-row">
         <div>
           <div className="eyebrow">TEAM OVERVIEW</div>
-          <h1>Good morning, Admin</h1>
+          <h1>Good morning</h1>
           <p className="muted-copy">Here's what's happening across your organization.</p>
         </div>
         <Button as={Link} to="/employees/new" className="primary-action">
