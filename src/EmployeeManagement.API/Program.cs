@@ -96,17 +96,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
+var isRender = string.Equals(builder.Configuration["RENDER"], "true", StringComparison.OrdinalIgnoreCase);
 var trustedProxyIps = (builder.Configuration["TRUSTED_PROXY_IPS"] ?? string.Empty)
     .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
     .Select(IPAddress.Parse)
     .ToArray();
-if (environment.IsProduction() && trustedProxyIps.Length == 0)
+if (environment.IsProduction() && !isRender && trustedProxyIps.Length == 0)
 {
     throw new InvalidOperationException("Configure TRUSTED_PROXY_IPS with exact trusted ingress IPs in Production.");
 }
+if (environment.IsProduction() && isRender && trustedProxyIps.Length > 0)
+{
+    throw new InvalidOperationException("Do not configure TRUSTED_PROXY_IPS on Render; its ingress addresses are not stable.");
+}
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = trustedProxyIps.Length == 0
+    options.ForwardedHeaders = isRender || trustedProxyIps.Length == 0
 ? ForwardedHeaders.None
 : ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
     foreach (var proxyIp in trustedProxyIps)
@@ -160,7 +165,10 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 app.UseMiddleware<GlobalExceptionMiddleware>();
-app.UseForwardedHeaders();
+if (!isRender)
+{
+    app.UseForwardedHeaders();
+}
 app.UseStatusCodePages(async statusContext =>
 {
     var response = statusContext.HttpContext.Response;
@@ -179,7 +187,10 @@ app.UseStatusCodePages(async statusContext =>
 if (environment.IsProduction())
 {
     app.UseHsts();
-    app.UseHttpsRedirection();
+    if (!isRender)
+    {
+        app.UseHttpsRedirection();
+    }
 }
 app.UseCors("Frontend");
 app.UseSwagger();

@@ -23,7 +23,7 @@ Copy `.env.example` to `.env` for local Docker use. Never commit `.env`, product
 | --- | --- | --- |
 | `ASPNETCORE_ENVIRONMENT` | Runtime environment | Set `Production` in hosting. This disables development bootstrap and enables HSTS/HTTPS redirection. |
 | `ASPNETCORE_URLS` | Kestrel bind address | Container default is port 8080; match the host's required port. |
-| `TRUSTED_PROXY_IPS` | Semicolon-separated IP addresses allowed to supply forwarded headers | Required in Production. Set exact ingress/proxy IPs for TLS-terminating hosts; forwarded headers from other hosts are ignored. |
+| `TRUSTED_PROXY_IPS` | Semicolon-separated exact proxy IPs allowed to supply forwarded headers | Required for Production except on Render. Render uses platform-managed ingress, so leave this unset there; see the Render deployment section. |
 | `MONGODB_URI` | MongoDB connection URI | Replace with the Atlas SRV URI and database user credentials. Keep private. Production requires TLS. |
 | `MONGODB_DATABASE_NAME` | Database name | Choose the production database name. |
 | `JWT_SECRET` | HMAC JWT signing key (minimum 32 bytes) | Generate high-entropy material, e.g. `openssl rand -base64 48`; store as a hosting secret. Placeholder values are rejected. |
@@ -125,3 +125,28 @@ npm run build
 The static site output is `frontend/dist`. Set `VITE_API_BASE_URL` to the real HTTPS API base before building and publish `dist` using a static hosting service such as Azure Static Web Apps, Cloudflare Pages, Netlify, or an equivalent. Configure the host's SPA fallback so routes such as `/employees/123` serve `index.html`. Configure backend `CORS_ALLOWED_ORIGINS` to the exact frontend HTTPS origin. Deploy API and frontend independently, configure HTTPS for both, and verify the browser can reach the API without mixed-content or CORS errors. No live hosting URL or credentials are supplied by this repository.
 
 The login page uses the existing `POST /api/auth/login` response (`accessToken`, `email`, `role`, `expiresAt`). Employee screens call the existing `/api/employees` list, item, mutation, and `/me` routes; pagination/filter query names and employee DTO fields match the API contract. The frontend does not add or assume backend routes.
+
+## Render Production deployment
+
+Render does not document a stable ingress proxy IP list for Web Services. Its load balancer terminates inbound TLS and forwards traffic to the service over HTTP; the service port is not directly reachable from the public internet. Render also sets `RENDER=true` at runtime. The application uses that platform-provided marker to disable forwarded-header processing on Render, so it does not trust `X-Forwarded-For` or `X-Forwarded-Proto` from arbitrary request headers. Keep `TRUSTED_PROXY_IPS` unset on Render. Do not use Render outbound IP ranges as proxy IPs; those ranges describe traffic from the app to external services such as MongoDB.
+
+Create a Render **Web Service** using the repository Dockerfile. In the service's Environment settings, configure these values (replace every placeholder with your real value):
+
+| Key | Render value |
+| --- | --- |
+| `ASPNETCORE_ENVIRONMENT` | `Production` |
+| `PORT` | `10000` (Render default) |
+| `ASPNETCORE_URLS` | `http://0.0.0.0:10000` |
+| `MONGODB_URI` | Your secret MongoDB Atlas `mongodb+srv://...` URI |
+| `MONGODB_DATABASE_NAME` | Your chosen production database |
+| `JWT_SECRET` | A new high-entropy secret, stored as a Render secret |
+| `JWT_ISSUER` | Your stable API issuer identifier |
+| `JWT_AUDIENCE` | Your stable API audience identifier |
+| `JWT_EXPIRY_MINUTES` | Your chosen allowed token lifetime, such as `60` |
+| `CORS_ALLOWED_ORIGINS` | The exact frontend origin, e.g. `https://your-real-frontend-domain.example` |
+
+Render sets `RENDER=true` automatically; do not add or override it. Do not set `TRUSTED_PROXY_IPS`, `INITIAL_ADMIN_EMAIL`, or `INITIAL_ADMIN_PASSWORD` on the production service. `ADMIN_PROVISIONING_EMAIL` and `ADMIN_PROVISIONING_PASSWORD` belong only to a separate one-time Admin provisioning run, then must be removed. Keep all credentials in Render's Environment/secret settings, not in source control.
+
+Render redirects public HTTP requests to HTTPS and terminates TLS at its load balancer. The API therefore keeps HSTS enabled in Production but skips its own HTTPS redirection on Render, which would otherwise see the internal HTTP connection and could create a redirect loop. On other Production hosts, the existing exact `TRUSTED_PROXY_IPS` allowlist and ASP.NET forwarded-header/HTTPS-redirection behavior remain required.
+
+To permit Atlas connections, use the Render API service's **Connect menu > Outbound tab** IP ranges in the Atlas Network Access allowlist if your Atlas setup requires IP allowlisting. Those are Render egress addresses for MongoDB connections; they are not ingress proxy addresses and must never be copied into `TRUSTED_PROXY_IPS`. Set the Render web service port to `10000` and use its assigned HTTPS hostname or custom domain for the frontend's `VITE_API_BASE_URL` and the API's exact `CORS_ALLOWED_ORIGINS`.
