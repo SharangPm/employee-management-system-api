@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using EmployeeManagement.API.DTOs.Auth;
 using EmployeeManagement.API.DTOs.Employee;
 using Xunit;
@@ -27,7 +28,26 @@ public sealed class ValidationTests
     private static List<ValidationResult> Validate(object value)
     {
         var results = new List<ValidationResult>();
-        Validator.TryValidateObject(value, new ValidationContext(value), results, validateAllProperties: true);
+
+        foreach (var parameter in value.GetType().GetConstructors().Single().GetParameters())
+        {
+            var property = value.GetType().GetProperty(
+                parameter.Name!,
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            var memberName = property?.Name ?? parameter.Name!;
+            var memberValue = property?.GetValue(value);
+            var context = new ValidationContext(value) { MemberName = memberName };
+
+            foreach (var attribute in parameter.GetCustomAttributes<ValidationAttribute>())
+            {
+                var result = attribute.GetValidationResult(memberValue, context);
+                if (result is not null && result != ValidationResult.Success)
+                {
+                    results.Add(result);
+                }
+            }
+        }
+
         return results;
     }
 }

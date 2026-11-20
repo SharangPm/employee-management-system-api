@@ -20,6 +20,7 @@ using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 var environment = builder.Environment;
+var apiJsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 var corsOrigins = (builder.Configuration["CORS_ALLOWED_ORIGINS"] ?? string.Empty)
     .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 if (environment.IsProduction() && corsOrigins.Length == 0)
@@ -84,7 +85,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 context.Response.ContentType = "application/json";
                 await context.Response.WriteAsync(JsonSerializer.Serialize(new ApiErrorResponse(
                     "unauthorized", "Authentication is required or the bearer token is invalid.", null,
-                    context.HttpContext.TraceIdentifier)));
+                    context.HttpContext.TraceIdentifier), apiJsonOptions));
             },
             OnForbidden = async context =>
             {
@@ -92,7 +93,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 context.Response.ContentType = "application/json";
                 await context.Response.WriteAsync(JsonSerializer.Serialize(new ApiErrorResponse(
                     "forbidden", "You are not allowed to access this resource.", null,
-                    context.HttpContext.TraceIdentifier)));
+                    context.HttpContext.TraceIdentifier), apiJsonOptions));
             }
         };
     });
@@ -182,7 +183,7 @@ app.UseStatusCodePages(async statusContext =>
     };
     response.ContentType = "application/json";
     await response.WriteAsync(JsonSerializer.Serialize(new ApiErrorResponse(
-        code, message, null, statusContext.HttpContext.TraceIdentifier)));
+        code, message, null, statusContext.HttpContext.TraceIdentifier), apiJsonOptions));
 });
 if (environment.IsProduction())
 {
@@ -197,6 +198,32 @@ app.UseSwagger();
 app.UseSwaggerUI();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/health/ready", async (HttpContext context, IMongoDatabase healthDatabase) =>
+{
+    using var timeout = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+    timeout.CancelAfter(TimeSpan.FromSeconds(3));
+
+    try
+    {
+        await healthDatabase.RunCommandAsync<MongoDB.Bson.BsonDocument>(
+            new MongoDB.Bson.BsonDocument("ping", 1),
+            cancellationToken: timeout.Token);
+        return Results.Ok(new { status = "ready" });
+    }
+    catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+    {
+        throw;
+    }
+    catch (Exception exception)
+    {
+        app.Logger.LogWarning(
+            "MongoDB readiness check failed with {ExceptionType}. TraceId: {TraceId}",
+            exception.GetType().Name,
+            context.TraceIdentifier);
+        return Results.Json(new { status = "unavailable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+});
 
 var database = app.Services.GetRequiredService<IMongoDatabase>();
 try
@@ -213,10 +240,14 @@ try
         new CreateIndexModel<Employee>(Builders<Employee>.IndexKeys.Ascending(employee => employee.LinkedUserId), new CreateIndexOptions { Unique = true, Sparse = true, Name = "ux_employee_linked_user" }),
         cancellationToken: timeout.Token);
 }
-catch (Exception)
+catch (Exception exception)
 {
-    app.Logger.LogCritical("MongoDB is unavailable or required indexes could not be initialized.");
-    throw new InvalidOperationException("Could not connect to MongoDB or initialize required indexes. Verify MONGODB_URI, network access, and database permissions.");
+    app.Logger.LogCritical(
+        "MongoDB startup check failed with {ExceptionType}; required indexes may not be initialized.",
+        exception.GetType().Name);
+    throw new InvalidOperationException(
+        "Could not connect to MongoDB or initialize required indexes. Verify MONGODB_URI, Atlas network access, and database permissions. See server logs for details.",
+        exception);
 }
 
 if (args.Contains("--provision-admin", StringComparer.Ordinal))

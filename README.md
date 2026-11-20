@@ -110,6 +110,11 @@ The static site output is `frontend/dist`. Set `VITE_API_BASE_URL` to the real H
 
 Frontend routes use the existing employee endpoints: list, item, create, update, and delete. Pagination/filter query names and employee DTO fields match the API contract.
 
+## Production diagnostics
+
+The API exposes `GET /health/ready` for hosting health checks. It pings MongoDB with a three-second deadline and returns only `{"status":"ready"}` or HTTP 503 with `{"status":"unavailable"}`. Set the Render Web Service health check path to `/health/ready`. The endpoint never returns the MongoDB URI or provider error details.
+
+MongoDB connections use explicit connection, server-selection, and wait-queue deadlines. The API passes request cancellation through to MongoDB and does not turn a caller disconnect into a server error. Database and timeout failures return sanitized JSON errors with HTTP 503; only the failure category and trace ID are logged, without exception contents or connection strings. If Atlas connection failures recur, check the Render service outbound IP ranges against Atlas Network Access, confirm the Atlas database user/URI, and correlate the request trace ID and duration in Render logs. Do not copy outbound ranges to proxy trust settings.
 ## Render Production deployment
 
 Render does not document a stable ingress proxy IP list for Web Services. Its load balancer terminates inbound TLS and forwards traffic to the service over HTTP; the service port is not directly reachable from the public internet. Render also sets `RENDER=true` at runtime. The application uses that platform-provided marker to disable forwarded-header processing on Render, so it does not trust `X-Forwarded-For` or `X-Forwarded-Proto` from arbitrary request headers. Keep `TRUSTED_PROXY_IPS` unset on Render. Do not use Render outbound IP ranges as proxy IPs; those ranges describe traffic from the app to external services such as MongoDB.

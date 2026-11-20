@@ -13,11 +13,21 @@ public sealed record ApiErrorResponse(
 
 public sealed class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
     public async Task InvokeAsync(HttpContext context)
     {
         try
         {
             await next(context);
+        }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            logger.LogInformation(
+                "Request cancelled by caller. Method: {Method}, Path: {Path}, TraceId: {TraceId}",
+                context.Request.Method,
+                context.Request.Path,
+                context.TraceIdentifier);
         }
         catch (Exception exception) when (!context.Response.HasStarted)
         {
@@ -35,7 +45,8 @@ public sealed class GlobalExceptionMiddleware(RequestDelegate next, ILogger<Glob
             context.Response.StatusCode = (int)status;
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(JsonSerializer.Serialize(
-                new ApiErrorResponse(code, message, null, context.TraceIdentifier)));
+                new ApiErrorResponse(code, message, null, context.TraceIdentifier),
+                JsonOptions));
         }
     }
 
@@ -48,6 +59,10 @@ public sealed class GlobalExceptionMiddleware(RequestDelegate next, ILogger<Glob
         MongoDB.Driver.MongoWriteException writeException
             when writeException.WriteError.Category == MongoDB.Driver.ServerErrorCategory.DuplicateKey =>
                 (HttpStatusCode.Conflict, "duplicate_email", "An account or employee with this email already exists."),
+        MongoDB.Driver.MongoException =>
+            (HttpStatusCode.ServiceUnavailable, "database_unavailable", "The database is temporarily unavailable."),
+        TimeoutException or OperationCanceledException =>
+            (HttpStatusCode.ServiceUnavailable, "dependency_timeout", "A required service did not respond in time."),
         KeyNotFoundException => (HttpStatusCode.NotFound, "not_found", exception.Message),
         ArgumentException => (HttpStatusCode.BadRequest, "invalid_request", exception.Message),
         ValidationException => (HttpStatusCode.BadRequest, "validation_failed", exception.Message),

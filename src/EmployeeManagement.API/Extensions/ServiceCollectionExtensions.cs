@@ -40,7 +40,12 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton(new JwtSettings(jwtSecret, issuer, audience, expiryMinutes));
-        services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoUri));
+        var mongoSettings = MongoClientSettings.FromConnectionString(mongoUri);
+        mongoSettings.ConnectTimeout = TimeSpan.FromSeconds(5);
+        mongoSettings.ServerSelectionTimeout = TimeSpan.FromSeconds(8);
+        mongoSettings.WaitQueueTimeout = TimeSpan.FromSeconds(5);
+
+        services.AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings));
         services.AddSingleton(provider => provider.GetRequiredService<IMongoClient>().GetDatabase(databaseName));
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
